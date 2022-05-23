@@ -182,6 +182,7 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
 
             fprintf(traceFp, "CUDA memcpyD2H detected: host_ptr: %p, device_ptr: %s, size: %ld, data_file: %s\n", p->dstHost, name, p->ByteCount, buf);
         }
+        fflush(traceFp);
         return;
     }
 
@@ -207,6 +208,7 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
                p->sharedMemBytes, p->hStream);
         
         // TODO: Need to get kernel param count and size and offset information
+        // TODO Tmp is null for rodinia benchmark backprop, why?
         // Can use nvbit_get_kernel_argument_sizes (nvbit 1.5.5 has problem with this)
         // Can also use nvbit_get_func_name
         // Currently parse the function signature instead, 
@@ -226,7 +228,7 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
                 type = funcTypes.substr(0, firstSplit);
                 funcTypes = funcTypes.substr(firstSplit + delim.length());
             }
-
+            
             // Parse on type and give type size
             if (type.compare("double*") == 0) {
                 CUdeviceptr dptr = (CUdeviceptr) *(double **)(*tmp);
@@ -312,13 +314,14 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
         
         tot_memcpy_h2d++;
 
-        fprintf(traceFp, "CUDA memcpyH2D detected: device_ptr: %s, host_ptr: %p, size: %d, data_file: %s\n", name, p->srcHost, p->ByteCount, buf);
+        fprintf(traceFp, "CUDA memcpyH2D detected: device_ptr: %s, host_ptr: %p, size: %d, data_file: %s, addr: %p\n", name, p->srcHost, p->ByteCount, buf, dptr);
     } else if (cbid == API_CUDA_cuMemFree || cbid == API_CUDA_cuMemFree_v2) {
         cuMemFree_v2_params *p = (cuMemFree_v2_params *) params;
         CUdeviceptr dptr = p->dptr;
         char* name = dptr_map->find(dptr)->second;
         fprintf(traceFp, "CUDA free detected: dptr: %s\n", name);
     }
+    fflush(traceFp);
 }
 
 void nvbit_at_term() {

@@ -1,5 +1,5 @@
 all: 
-	$(MAKE) -C tracer_tool
+	$(MAKE) -C cuda_call_tracer
 
 clean:
-	$(MAKE) clean -C tracer_tool
+	$(MAKE) clean -C cuda_call_tracer
