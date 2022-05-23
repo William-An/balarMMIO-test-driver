@@ -7,9 +7,11 @@ GCC Version: 7.5.0
 """
 
 import subprocess
+import logging
 import os, re, hashlib
 from yaml import load, dump
 from optparse import OptionParser
+from collections import Counter
 import yaml
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -40,8 +42,17 @@ def get_argfoldername( args ):
 #                        "the benchmark suite names.",
 #                  default="rodinia_2.0-ft")
 
+# Envs for launch
+cuda_version = os.getenv("CUDA_VERSION")
+cuda_api_tracer_tool = os.path.abspath(TRACER_TOOL_SO)
+
+
+# Logging config
+launch_counter = Counter()
+logging.basicConfig(level=logging.INFO)
+
+# Benchmark runner
 benchmark_suites_table = yaml.load(open(APPS_YAML_FILEPATH), Loader=Loader)
-launch_env = {"CUDA_INJECTION64_PATH": os.path.abspath(TRACER_TOOL_SO)}
 top_dir = os.path.abspath(".")
 for benchmark_suite_name in benchmark_suites_list:
     benchmark_suite_root = os.path.join(os.path.abspath(TRACES_FOLDER), benchmark_suite_name)
@@ -76,21 +87,44 @@ for benchmark_suite_name in benchmark_suites_list:
                 os.unlink(app_sym_data_dir)
             os.symlink(app_data_dir, app_sym_data_dir)
 
-            # Create link to app exec path
-            app_sym_link = os.path.join(run_dir, "run")
-            if os.path.islink(app_sym_link):
-                os.unlink(app_sym_link)
-            os.symlink(app_exec_path, app_sym_link)
+            # Launch shell script
+            shell_script = "# Launch app: {} in benchmark suite: {}\n".format(app_name, benchmark_suite_name)
+            
+            # Prepare envars
+            shell_script += "export CUDA_VERSION={}\n".format(cuda_version)
+            shell_script += "export CUDA_INJECTION64_PATH={}\n".format(cuda_api_tracer_tool)
+            shell_script += "export NOBANNER={}\n".format(0)
+            
+            # Run
+            shell_script += "{} {}\n".format(app_exec_path, app_args)
 
-            # Launch command
-            launch_cmd = []
-            launch_cmd.append("run")
-            if app_args:
-                launch_cmd.append(app_args)
-            print("Running app {} with args: {} at dir: {}".format(app_exec_path, app_args, run_dir))
-            print(launch_cmd)
+            # Move traces
+            shell_script += "mv ./*.trace ./trace\n"
+            shell_script += "mv ./*.data ./trace\n"
 
-            subprocess.run(launch_cmd, shell=True, check=True, env=launch_env)
+            # Write script
+            open(os.path.join(run_dir, "run.sh"), "w").write(shell_script)
+
+            # Run script
+            outFile = open(os.path.join(run_dir, "run.log"), "w")
+            errFile = open(os.path.join(run_dir, "run.err"), "w")
+            res = subprocess.run(["bash", "run.sh"], check=False, stdout=outFile, stderr=errFile)
+            outFile.close()
+            errFile.close()
+
+            # Check err status
+            if (res.returncode == 0):
+                # Success
+                logging.info("app {} in benchmark suite {} ran successfully".format(app_name, benchmark_suite_name))
+                launch_counter["succ"] += 1
+            else:
+                # Failure
+                logging.warning("app {} in benchmark suite {} failed to run with args: {}".format(app_name, benchmark_suite_name, res.args))
+                launch_counter["fail"] += 1
 
             os.chdir(top_dir)
 
+# Print run summary
+logging.info("Traces run finished")
+logging.info("Benchmarks completed: {}".format(launch_counter["succ"]))
+logging.info("Benchmarks failed: {}".format(launch_counter["fail"]))
