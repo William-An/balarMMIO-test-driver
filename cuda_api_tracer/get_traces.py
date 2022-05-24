@@ -9,7 +9,7 @@ GCC Version: 7.5.0
 from email.policy import default
 import subprocess
 import logging
-import os, re, hashlib
+import os, re, hashlib, stat
 from yaml import load, dump
 from optparse import OptionParser
 from collections import Counter
@@ -120,7 +120,9 @@ for benchmark_suite_name in benchmark_suites_list:
             shell_script += "mv ./*.data ./trace\n"
 
             # Write script
-            open(os.path.join(run_dir, "run.sh"), "w").write(shell_script)
+            shell_path = os.path.join(run_dir, "run.sh")
+            open(shell_path, "w").write(shell_script)
+            os.chmod(shell_path, stat.S_IRWXU | stat.S_IRWXG)
 
             # Run script
             outFile = open(os.path.join(run_dir, "run.log"), "w")

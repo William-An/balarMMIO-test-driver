@@ -230,18 +230,10 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
             }
             
             // Parse on type and give type size
-            if (type.compare("double*") == 0) {
-                CUdeviceptr dptr = (CUdeviceptr) *(double **)(*tmp);
+            if (type.compare(type.length() - 1, 1, "*") == 0) {
+                CUdeviceptr dptr = *(CUdeviceptr *)(*tmp);
                 char* name = dptr_map->find(dptr)->second;
-                fprintf(traceFp, "%s/%d/", name, sizeof(double*));
-            } else if (type.compare("float*") == 0) {
-                CUdeviceptr dptr = (CUdeviceptr) *(float **)(*tmp);
-                char* name = dptr_map->find(dptr)->second;
-                fprintf(traceFp, "%s/%d/", name, sizeof(float*));
-            } else if (type.compare("int*") == 0) {
-                CUdeviceptr dptr = (CUdeviceptr) *(int **)(*tmp);
-                char* name = dptr_map->find(dptr)->second;
-                fprintf(traceFp, "%s/%d/", name, sizeof(int*));
+                fprintf(traceFp, "%s/%d/", name, sizeof(CUdeviceptr));
             } else if (type.compare("double") == 0) {
                 fprintf(traceFp, "%f/%d/", *(double *)(*tmp), sizeof(double));
             } else if (type.compare("float") == 0) {
