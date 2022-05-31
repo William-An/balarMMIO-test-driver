@@ -1,3 +1,4 @@
 gpu-app-collection/
 venv/
 tmp/
+*.out

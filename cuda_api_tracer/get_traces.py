@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 
-CUDA Version: 10.1
+CUDA Version: 9.1
 GCC Version: 7.5.0
 
 """
@@ -80,6 +80,7 @@ for benchmark_suite_name in benchmark_suites_list:
         for config in app_configs:
             # Create folder to keep run data and traces
             app_args = config["args"]
+            app_args = app_args if app_args else ""
             run_dir = os.path.join(app_dir, get_argfoldername(app_args))
             trace_dir = os.path.join(run_dir, "trace")
             if not os.path.exists(run_dir):
