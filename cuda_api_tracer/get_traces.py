@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
 
-CUDA Version: 9.1
-GCC Version: 7.5.0
+CUDA Version: 10.1
+GCC Version: 5.0
 
 """
 
-from email.policy import default
 import subprocess
 import logging
 import os, re, hashlib, stat
@@ -18,16 +17,8 @@ try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
+from common import get_argfoldername
 
-def get_argfoldername( args ):
-    if args == "" or args == None:
-        return "NO_ARGS"
-    else:
-        foldername = re.sub(r"[^a-z^A-Z^0-9]", "_", str(args).strip())
-        # For every long arg lists - create a hash of the input args
-        if len(str(args)) > 256:
-            foldername = "hashed_args_" + hashlib.md5(args).hexdigest()
-        return foldername
 
 parser = OptionParser()
 parser.add_option("-B", "--benchmark_list", dest="benchmark_list",

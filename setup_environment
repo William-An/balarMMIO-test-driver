@@ -1,0 +1,2 @@
+# Setup some envars for the balar driver repo
+export BALAR_DRIVER_ROOT="$( cd "$( dirname "$BASH_SOURCE" )" && pwd )"

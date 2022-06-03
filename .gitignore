@@ -2,3 +2,4 @@ gpu-app-collection/
 venv/
 tmp/
 *.out
+__pycache__/

@@ -1,24 +1,21 @@
-# Automatically generated SST Python input
-# Run script: sst testBalar-simple.py --model-options="-c ariel-gpu-v100.cfg -v" > tmp.out 2>&1
 import sst
+import sys
 try:
     import ConfigParser
 except ImportError:
     import configparser as ConfigParser
 import argparse
-from utils import *
-# from mhlib import componentlist
+from utils_original import *
 
-# Arguments
+
+# Parse commandline arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="specify configuration file", required=True)
 parser.add_argument("-v", "--verbose", help="increase verbosity of output", action="store_true")
 parser.add_argument("-s", "--statfile", help="statistics file", default="./stats.out")
 parser.add_argument("-l", "--statlevel", help="statistics level", type=int, default=16)
-parser.add_argument("-t", "--trace", help="CUDA api calls trace file path", default="cuda_calls.trace")
-parser.add_argument("-x", "--binary", help="specify input cuda binary", default="")
+parser.add_argument("-x", "--binary", help="specify input binary", default="")
 parser.add_argument("-a", "--arguments", help="colon sep binary arguments", default="")
-
 
 args = parser.parse_args()
 
@@ -26,174 +23,148 @@ verbose = args.verbose
 cfgFile = args.config
 statFile = args.statfile
 statLevel = args.statlevel
-traceFile = args.trace
 binaryFile = args.binary
 binaryArgs = args.arguments
 
 # Build Configuration Information
 config = Config(cfgFile, verbose=verbose)
 
-DEBUG_L1 = 0
-DEBUG_MEM = 0
-DEBUG_CORE = 0
-DEBUG_NIC = 0
-DEBUG_LEVEL = 10
+if 'ariel' in config.app:
+   arielCPU = sst.Component("A0", "ariel.ariel")
+   arielCPU.addParams(config.getCoreConfig(0))
+   if binaryFile == "":
+      myExec = config.executable
+   else:
+      myExec = binaryFile
 
-debug_params = { "debug" : 1, "debug_level" : 10 }
+   argList = binaryArgs.split(" ")
 
-# On network: Core, L1, MMIO device, memory
-# Logical communication: Core->L1->memory
-#                        Core->MMIO
-#                        MMIO->memory    
-core_group = 0
-l1_group = 1
-mmio_group = 2
-memory_group = 3
+   print ("Num args " + str(len(argList)))
+   print ("0 " + str(argList[0]))
+   if len(argList) == 0:
+      print ("No args")
+      arielCPU.addParams({
+         "executable" : myExec,
+         })
+   else:
+      myArgs = "--" + str(argList[0])
+      print ("App args " + str(myArgs))
+      arielCPU.addParams({
+         "executable" : myExec,
+         "appargcount" : str(len(argList)),
+         "apparg0" : myArgs,
+         })
 
-core_dst = [l1_group, mmio_group]
-l1_src = [core_group]
-l1_dst = [memory_group]
-mmio_src = [core_group]
-mmio_dst = [memory_group]
-memory_src = [l1_group,mmio_group]
+print ("Configuring CPU Network-on-Chip...")
 
-# Constans shared across components
-network_bw = "25GB/s"
-clock = "2GHz"
-mmio_addr = 1024
+#router = sst.Component("router", "merlin.hr_router")
+#router.addParams(config.getRouterParams())
+#router.addParam('id', 0)
 
+router_ports = config.cpu_cores + 2
 
-# Test CPU components and mem hierachy
-cpu = sst.Component("cpu", "balar.BalarTestCPU")
-cpu.addParams({
-      "opCount" : "1000",
-      "memFreq" : "4",
-      "memSize" : "1KiB",
-      "clock" : clock,
-      "verbose" : 3,
-      "mmio_addr" : mmio_addr, # Just above memory addresses
-      "gpu_addr": mmio_addr,
-      
-      "read_freq" : 0,
-      "write_freq" : 0,
-      "flush_freq" : 0,
-      "flushinv_freq" : 0,
-      "custom_freq" : 0,
-      "llsc_freq" : 0,
-      "mmio_freq" : 0,
-      "gpu_freq" : 100,
-
-      # Trace and executable info
-      "trace_file": traceFile,
-      "cuda_executable": binaryFile,
-})
-iface = cpu.setSubComponent("memory", "memHierarchy.standardInterface")
-iface.addParams(debug_params)
-cpu_nic = iface.setSubComponent("memlink", "memHierarchy.MemNIC")
-cpu_nic.addParams({"group" : core_group, 
-                   "destinations" : core_dst,
-                   "network_bw" : network_bw})
-#cpu_nic.addParams(debug_params)
-
-l1cache = sst.Component("l1cache", "memHierarchy.Cache")
-l1cache.addParams({
-      "access_latency_cycles" : "2",
-      "cache_frequency" : clock,
-      "replacement_policy" : "lru",
-      "coherence_protocol" : "MSI",
-      "associativity" : "4",
-      "cache_line_size" : "64",
-      "cache_size" : "2 KB",
-      "L1" : "1",
-      "addr_range_start" : 0,
-      "addr_range_end" : mmio_addr - 1,
-      "debug" : DEBUG_L1,
-      "debug_level" : DEBUG_LEVEL
-})
-l1_nic = l1cache.setSubComponent("cpulink", "memHierarchy.MemNIC")
-l1_nic.addParams({ "group" : l1_group, 
-                   "sources" : l1_src,
-                   "destinations" : l1_dst,
-                   "network_bw" : network_bw})
-#l1_nic.addParams(debug_params)
-
-mmio = sst.Component("balar", "balar.balarMMIO")
-mmio.addParams({
-      "verbose" : 3,
-      "clock" : clock,
-      "base_addr" : mmio_addr,
-})
-mmio.addParams(config.getGPUConfig())
-
-mmio_iface = mmio.setSubComponent("iface", "memHierarchy.standardInterface")
-#mmio_iface.addParams(debug_params)
-mmio_nic = mmio_iface.setSubComponent("memlink", "memHierarchy.MemNIC")
-mmio_nic.addParams({"group" : mmio_group, 
-                    "sources" : mmio_src,
-                    "destinations" : mmio_dst,
-                    "network_bw" : network_bw })
-#mmio_nic.addParams(debug_params)
-
-chiprtr = sst.Component("chiprtr", "merlin.hr_router")
-chiprtr.addParams({
-      "xbar_bw" : "1GB/s",
-      "id" : "0",
-      "input_buf_size" : "1KB",
-      "num_ports" : "4",
-      "flit_size" : "72B",
-      "output_buf_size" : "1KB",
-      "link_bw" : "1GB/s",
-      "topology" : "merlin.singlerouter"
-})
-chiprtr.setSubComponent("topology","merlin.singlerouter")
-
-memctrl = sst.Component("memory", "memHierarchy.MemController")
-memctrl.addParams({
-    "debug" : DEBUG_MEM,
-    "debug_level" : DEBUG_LEVEL,
-    "clock" : "1GHz",
-    "addr_range_end" : mmio_addr - 1,
-})
-mem_nic = memctrl.setSubComponent("cpulink", "memHierarchy.MemNIC")
-mem_nic.addParams({"group" : memory_group, 
-                   "sources" : "[1,2]", # Group 1 = L1, Group 2 = MMIO
-                   "network_bw" : network_bw})
-#mem_nic.addParams(debug_params)
-
-memory = memctrl.setSubComponent("backend", "memHierarchy.simpleMem")
-memory.addParams({
-      "access_time" : "100 ns",
-      "mem_size" : "512MiB"
+router = sst.Component("cpu_xbar", "shogun.ShogunXBar")
+router.addParams(config.getXBarParams())
+router.addParams({
+      "verbose" : 1,
+      "port_count" : router_ports,
 })
 
-# Define the simulation links for CPU
-#          cpu/cpu_nic
-#                 |
-#  l1/l1_nic - chiprtr - mem_nic/mem/mmio
-#
-link_cpu_rtr = sst.Link("link_cpu")
-link_cpu_rtr.connect( (cpu_nic, "port", "1000ps"), (chiprtr, "port0", "1000ps") )
+# Add GPGPU-sim Component
+gpu = sst.Component("gpu0", "balar.balar")
+gpu.addParams(config.getGPUConfig())
 
-link_l1_rtr = sst.Link("link_l1")
-link_l1_rtr.connect( (l1_nic, "port", '1000ps'), (chiprtr, "port1", "1000ps") )
+# Configure CPU mem hirerchy
+# Connect Cores & caches
+for next_core_id in range(config.cpu_cores):
+    print ("Configuring CPU core %d..."%next_core_id)
 
-link_mmio_rtr = sst.Link("link_mmio")
-link_mmio_rtr.connect( (mmio_nic, "port", "500ps"), (chiprtr, "port2", "500ps"))
+    if 'miranda' in config.app:
+        cpu = sst.Component("cpu%d"%(next_core_id), "miranda.BaseCPU")
+        cpu.addParams(config.getCoreConfig(next_core_id))
+        cpuPort = "cache_link"
+    elif 'ariel' in config.app:
+        cpu = arielCPU
+        cpuPort = "cache_link_%d"%next_core_id
+        gpuPort = "requestMemLink%d"%next_core_id
 
-link_mem_rtr = sst.Link("link_mem")
-link_mem_rtr.connect( (mem_nic, "port", "1000ps"), (chiprtr, "port3", "1000ps") )
+    l1 = sst.Component("l1cache_%d"%(next_core_id), "memHierarchy.Cache")
+    l1.addParams(config.getL1Params())
 
-# GPU Memory hierarchy
-#          mmio/GPU
-#           |
-#           L1
-#           |
-#           L2
-#           |
-#           mem port
-#           
-# GPU Memory hierarchy configuration
+    l2 = sst.Component("l2cache_%d"%(next_core_id), "memHierarchy.Cache")
+    l2.addParams(config.getL2Params())
+
+    l1g = sst.Component("l1PCIcache_%d"%(next_core_id), "memHierarchy.Cache")
+    l1g.addParams(config.getL1Params())
+
+    l2g = sst.Component("l2PCIcache_%d"%(next_core_id), "memHierarchy.Cache")
+    l2g.addParams(config.getL2Params())
+
+    connect("cpu_cache_link_%d"%next_core_id,
+            cpu, cpuPort,
+            l1, "high_network_0",
+            config.default_link_latency).setNoCut()
+
+    connect("l2cache_%d_link"%next_core_id,
+            l1, "low_network_0",
+            l2, "high_network_0",
+            config.default_link_latency).setNoCut()
+
+    connect("l2_ring_link_%d"%next_core_id,
+            l2, "directory",
+            router, "port%d"%next_core_id,
+            config.default_link_latency).setNoCut()
+
+# Connect CPU Memory and Memory Controller to the ring
+mem = sst.Component("memory", "memHierarchy.MemController")
+mem.addParams(config.getMemCtrlParams())
+membk = mem.setSubComponent("backend", "memHierarchy.simpleMem")
+membk.addParams(config.getMemBkParams())
+
+dc = sst.Component("dc", "memHierarchy.DirectoryController")
+dc.addParams(config.getDCParams(0))
+
+connect("mem_link_0",
+        mem, "direct_link",
+        dc, "memory",
+        config.default_link_latency).setNoCut()
+
+connect("dc_link_0",
+        dc, "network",
+        router, "port%d"%(config.cpu_cores+1),
+        config.default_link_latency).setNoCut()
+
+
+#Connect CPU with GPU using PCI
+connect("gpu_PCI_link_%d"%next_core_id,
+        gpu, "requestMemLink%d"%next_core_id,
+        l1g, "high_network_0",
+        config.gpu_cpu_latency).setNoCut()
+
+#Assume we have PCI caches
+connect("PCI_l1g_%d_link"%next_core_id,
+        l1g, "low_network_0",
+        l2g, "high_network_0",
+        config.default_link_latency).setNoCut()
+
+connect("PCI_l1g_l2g_ring_link_%d"%next_core_id,
+        l2g, "directory",
+        router, "port%d"%(config.cpu_cores),
+        config.default_link_latency)
+
+connect("cpu_gpu_command_link_%d"%next_core_id,
+        cpu, "gpu_link_%d"%next_core_id,
+        gpu, "requestLink%d"%(next_core_id),
+        config.default_link_latency).setNoCut()
+
+
+# Configure GPU mem hierarchy
+
 print ("Configuring GPU Network-on-Chip...")
+
+#GPUrouter = sst.Component("GPUrouter", "merlin.hr_router")
+#GPUrouter.addParams(config.getGPURouterParams())
+#GPUrouter.addParam('id', 1)
 
 gpu_router_ports = config.gpu_cores + config.gpu_l2_parts
 
@@ -212,10 +183,9 @@ for next_core_id in range(config.gpu_cores):
 
     l1g = sst.Component("l1gcache_%d"%(next_core_id), "memHierarchy.Cache")
     l1g.addParams(config.getGPUL1Params())
-    l1g.addParams(debug_params)
 
     connect("gpu_cache_link_%d"%next_core_id,
-            mmio, gpuPort,
+            gpu, gpuPort,
             l1g, "high_network_0",
             config.default_link_latency).setNoCut()
 
@@ -331,11 +301,12 @@ for next_group_id in range(config.hbmStacks):
          next_cache = next_cache + 1
 
 
+# ===============================================================================
 
-# ===========================================================
-# Enable statistics
+# Enable SST Statistics Outputs for this simulation
 sst.setStatisticLoadLevel(statLevel)
 sst.enableAllStatisticsForAllComponents({"type":"sst.AccumulatorStatistic"})
 sst.setStatisticOutput("sst.statOutputTXT", { "filepath" : statFile })
 
 print ("Completed configuring the cuda-test model")
+
