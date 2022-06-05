@@ -8,6 +8,9 @@ python3 get_traces.py -B [BENCHMARKS]
 
 # Run traces
 python3 run_traces.py -B [BENCHMARKS]
+
+# Example
+python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_exe=~/SST-Integration/sstcore-11.0.0-release/bin/sst
 ```
 
 ### MMIO Balar
