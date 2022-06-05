@@ -108,10 +108,10 @@ for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchma
       mmio_shell_script = "# Launch app: {} in benchmark suite: {}\n".format(app_name, benchmark_suite_name)
 
       # Run
-      mmio_shell_script += "{} {} --model-options='--statfile=mmio_stats.out -c {} --trace=trace/cuda_calls.trace --binary=run -a \"{}\" '\n".format(mmio_balar_sst_exe,
+      mmio_shell_script += "{} {} --model-options='--statfile=mmio_stats.out -c {} --trace=trace/cuda_calls.trace --binary=run {} '\n".format(mmio_balar_sst_exe,
                   MMIO_BALAR_LAUNCH_NAME,
                   SST_GPU_CONFIG_NAME,
-                  app_args)
+                  "" if app_args == "" else "-a \"{}\"".format(app_args))
       
       # Write mmio script
       mmio_shell_path = os.path.join(run_dir, "sst_mmio.sh")
@@ -120,6 +120,7 @@ for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchma
 
       # Run script
       # TODO Run the original balar as well
+      # TODO Handle the gpgpusim stat ouput as well, rename differently with respect to mmio and ariel versions
       outFile = open(os.path.join(run_dir, "sst_mmio.log"), "w")
       errFile = open(os.path.join(run_dir, "sst_mmio.err"), "w")
       res = subprocess.run(["bash", "sst_mmio.sh"], check=False, stdout=outFile, stderr=errFile)

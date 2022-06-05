@@ -35,12 +35,15 @@ parser.add_option("--apps_config", dest="apps_config", help="path to yaml config
 benchmark_suites_list = options.benchmark_list.split(",")
 benchmark_suites_list = [i.strip() for i in benchmark_suites_list]
 logging_level = options.loglevel.upper()
-tracer_tool_so = options.trace_tool
+tracer_tool_so = os.path.abspath(options.trace_tool)
 trace_folder = os.path.abspath(options.output_folder)
 apps_yaml_config = os.path.abspath(options.apps_config)
 
 # Envs for launch
 cuda_version = os.getenv("CUDA_VERSION")
+
+# Prepare a list of cuda versions to link the corresponding binary as well
+cuda_versions = ["9.1", ]
 cuda_api_tracer_tool = os.path.abspath(tracer_tool_so)
 
 
@@ -96,6 +99,19 @@ for benchmark_suite_name in benchmark_suites_list:
                 os.unlink(app_symlink)
             os.symlink(app_exec_path, app_symlink)
 
+            # Create softlinks to different cuda version binaries
+            for version in cuda_versions:
+                # Evaluate the envar for different cuda version
+                # sst-gpusim runs on 9.1, traces run on 10.1
+                os.environ["CUDA_VERSION"] = version
+                alter_app_exec_path = os.path.join(os.path.expandvars(benchmark_suite["exec_dir"]), app_name)
+                alter_app_symlink = os.path.join(run_dir, "run.{}".format(version))
+                if os.path.islink(alter_app_symlink):
+                    os.unlink(alter_app_symlink)
+                os.symlink(alter_app_exec_path, alter_app_symlink)
+                # Restore cuda version
+                os.environ["CUDA_VERSION"] = cuda_version
+
             # Launch shell script
             shell_script = "# Launch app: {} in benchmark suite: {}\n".format(app_name, benchmark_suite_name)
             
@@ -108,8 +124,8 @@ for benchmark_suite_name in benchmark_suites_list:
             shell_script += "{} {}\n".format(app_exec_path, app_args)
 
             # Move traces
-            shell_script += "mv ./*.trace ./trace\n"
-            shell_script += "mv ./*.data ./trace\n"
+            shell_script += "mv -f ./*.trace ./trace\n"
+            shell_script += "mv -f ./*.data ./trace\n"
 
             # Write script
             shell_path = os.path.join(run_dir, "run.sh")

@@ -2,6 +2,14 @@
 
 ## Run script
 
+```bash
+# Get trace
+python3 get_traces.py -B [BENCHMARKS]
+
+# Run traces
+python3 run_traces.py -B [BENCHMARKS]
+```
+
 ### MMIO Balar
 
 1. `sst testBalar-simple.py --model-options='-c ariel-gpu-v100.cfg -v -x run -t trace/cuda_calls.trace'`
@@ -31,7 +39,7 @@
     1. Due to alignment setting
         1. Irregular argument size need to align properly?
         2. Implement this in the testcpu
-1. [ ] Link the python run script and cfg file for SST in run script?
+1. [x] Link the python run script and cfg file for SST in run script?
 1. [ ] Create a clean script to clear all tmp files and option to not dump test data?
     1. Due to disk space concern
-1. [ ] In hw traces, save multiple cuda version traces
+1. [ ] In hw traces, save multiple cuda version traces?
