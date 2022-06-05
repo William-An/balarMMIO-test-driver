@@ -47,13 +47,19 @@ if 'ariel' in config.app:
          "executable" : myExec,
          })
    else:
-      myArgs = "--" + str(argList[0])
-      print ("App args " + str(myArgs))
-      arielCPU.addParams({
-         "executable" : myExec,
-         "appargcount" : str(len(argList)),
-         "apparg0" : myArgs,
-         })
+      # myArgs = "--" + str(argList[0])
+      # print ("App args " + str(myArgs))
+      # arielCPU.addParams({
+      #    "executable" : myExec,
+      #    "appargcount" : str(len(argList)),
+      #    "apparg0" : myArgs,
+      #    })
+      myArgs = [str(arg) for arg in argList]
+      arielCPU.addParams({"executable" : myExec,  "appargcount" : str(len(argList))})
+      argDict = dict()
+      for i in range(0, len(myArgs)):
+         argDict["apparg{}".format(i)] = myArgs[i]
+      arielCPU.addParams(argDict)
 
 print ("Configuring CPU Network-on-Chip...")
 
