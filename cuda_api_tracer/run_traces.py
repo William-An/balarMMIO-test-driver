@@ -113,7 +113,7 @@ for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchma
                   MMIO_BALAR_LAUNCH_NAME,
                   SST_GPU_CONFIG_NAME,
                   "" if app_args == "" else "-a \"{}\"".format(app_args))
-      original_shell_script += "{} {} --model-options='--statfile=mmio_stats.out -c {} --binary=run.9.1 {} '\n".format(original_balar_sst_exe,
+      original_shell_script += "{} {} --model-options='--statfile=original_stats.out -c {} --binary=run.9.1 {} '\n".format(original_balar_sst_exe,
                   ORIGINAL_BALAR_LAUNCH_NAME,
                   SST_GPU_CONFIG_NAME,
                   "" if app_args == "" else "-a \"{}\"".format(app_args))

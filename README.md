@@ -30,6 +30,9 @@ python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_
     1. `tracer_tool` setup script
 1. Test app are compiled with CUDA 10.1 version
     1. `test_app` setup script
+1. Need both 9.1 and 10.1 app
+    1. 9.1 for simulation run
+    1. 10.1 for tracer tool run
 
 ## TODO
 
@@ -43,6 +46,6 @@ python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_
         1. Irregular argument size need to align properly?
         2. Implement this in the testcpu
 1. [x] Link the python run script and cfg file for SST in run script?
-1. [ ] Create a clean script to clear all tmp files and option to not dump test data?
+1. [x] Create a clean script to clear all tmp files and option to not dump test data?
     1. Due to disk space concern
 1. [ ] In hw traces, save multiple cuda version traces?
