@@ -1,5 +1,25 @@
 # SST Test Run
 
+Run the gpu applications with both ariel and mmio balar.
+
+## Prerequisite
+
+1. Two SST installations
+    1. One with MMIO balar
+    1. One with ariel balar
+1. Need to download [gpu-app-collection](https://github.com/accel-sim/gpu-app-collection) from accel-sim repo
+    1. Compile with both CUDA 9.1 and 10.1
+1. Need to download NVBIT tool in `cuda_api_tracer/` folder
+1. Need to have a python environment installing the packages in `requirements.txt`, could use `virtualenv` to create a sandbox
+1. `get_traces.py` script
+    1. Need to `source gpu-app-collection/src/setup_environment` before calling
+    1. Runs with CUDA 10.1 and GCC 5.5.0
+    1. But higher GCC version should also work
+1. `run_traces.py` script
+    1. Need to `source setup_environment` before calling
+    1. Need CUDA 9.1 and GCC 4.9.2 for the ariel balar to works
+    1. MMIO balar works with CUDA 10.1 and GCC 5.5.0
+
 ## Run script
 
 ```bash
@@ -36,9 +56,9 @@ python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_
 
 ## TODO
 
-1. Use gpu app from accel sim
-    1. Need automatic script to do the work
-1. [ ] Python script launch cannot find cudart for app
+1. [x] Use gpu app from accel sim
+    1. [x] Need automatic script to do the work
+1. [x] Python script launch cannot find cudart for app
 1. [x] Rodinia backprop benchmark cannot trace, kernel parameter is null
 1. [x] Rodinia 2.0 Backprop
     1. second kernel has issue
@@ -49,3 +69,5 @@ python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_
 1. [x] Create a clean script to clear all tmp files and option to not dump test data?
     1. Due to disk space concern
 1. [ ] In hw traces, save multiple cuda version traces?
+1. [ ] Parallelize the run traces
+1. [ ] Minimize the python requirement file? (iPython not needed, just the YAML file?)
