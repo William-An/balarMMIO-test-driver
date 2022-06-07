@@ -31,6 +31,13 @@ python3 run_traces.py -B [BENCHMARKS]
 
 # Example
 python3 run_traces.py -B GPU_Microbenchmark,rodinia_2.0-ft --original_balar_sst_exe=~/SST-Integration/sstcore-11.0.0-release/bin/sst
+
+# Collecting stats
+## MMIO example
+python3 convert_results.py -B GPU_Microbenchmark,rodinia_2.0-ft --statfile=mmio_stats.out --gpgpusim_statfile=gpgpu_inst_stats_mmio.log -o mmio_stats.json
+## Ariel/Original balar example
+python3 convert_results.py -B GPU_Microbenchmark,rodinia_2.0-ft --statfile=original_stats.out --gpgpusim_statfile=gpgpu_inst_stats_original.log -o original_stats.json
+
 ```
 
 ### MMIO Balar

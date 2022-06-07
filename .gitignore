@@ -2,4 +2,7 @@ gpu-app-collection/
 venv/
 tmp/
 *.out
+*.log
+*.err
+*.json
 __pycache__/
