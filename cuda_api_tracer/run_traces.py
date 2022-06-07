@@ -80,7 +80,6 @@ launch_files_paths = [os.path.join(repo_dir, i) for i in launch_files_names]
 # Each app in benchmark gets generated
 logging.info("Sim run starting")
 for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchmark_suites_table, root_logger):
-      # TODO Run with original balar and mmio balar
       # Chdir into the run dir
       run_dir = app_record["run_dir"]
       trace_dir = app_record["trace_dir"]
@@ -113,10 +112,12 @@ for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchma
                   MMIO_BALAR_LAUNCH_NAME,
                   SST_GPU_CONFIG_NAME,
                   "" if app_args == "" else "-a \"{}\"".format(app_args))
+      mmio_shell_script += "sim_exit_code=$?\n"
       original_shell_script += "{} {} --model-options='--statfile=original_stats.out -c {} --binary=run.9.1 {} '\n".format(original_balar_sst_exe,
                   ORIGINAL_BALAR_LAUNCH_NAME,
                   SST_GPU_CONFIG_NAME,
                   "" if app_args == "" else "-a \"{}\"".format(app_args))
+      original_shell_script += "sim_exit_code=$?\n"
 
       # Clear up tasks
       mmio_shell_script += "mv gpgpu_inst_stats.txt gpgpu_inst_stats_mmio.log\n"
@@ -125,6 +126,10 @@ for app_record in get_benchmark_app(benchmark_suites_list, trace_folder, benchma
       original_shell_script += "mv gpgpu_inst_stats.txt gpgpu_inst_stats_original.log\n"
       original_shell_script += "rm *.ptx *.ptxas\n"
       original_shell_script += "rm _app_cuda_version_* _cuobjdump_list_ptx_*\n"
+
+      # Return the simulation cmd status
+      mmio_shell_script += "exit '$sim_exit_code'\n"
+      original_shell_script += "exit '$sim_exit_code'\n"
       
       # Write launch scripts
       mmio_shell_path = os.path.join(run_dir, "sst_mmio.sh")
